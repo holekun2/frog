@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- New "orchestrator" role for managing complex multi-part issues
+  - Automatically breaks down complex issues into manageable sub-tasks
+  - Creates and delegates sub-issues with appropriate labels
+  - Monitors sub-issue completion and coordinates execution
+  - Maintains parent-child issue relationships
+- Orchestration system infrastructure
+  - Parent-child issue mapping and tracking
+  - Message bus for inter-issue communication
+  - Sub-issue completion detection and parent notification
+- User authentication token support for cross-posting between issues
+  - Enables automated communication between parent and child issues
+  - Configurable per repository or globally
+
+### Changed
+- Extended prompt type system to include "orchestrator" alongside existing "debugger", "builder", and "scoper" roles
+- Updated configuration to support orchestration settings
+
 ## [0.1.44] - 2025-08-19
 
 ### Changed

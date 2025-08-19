@@ -20,9 +20,6 @@ import type {
 	IssueMinimal,
 	LinearAgentSessionCreatedWebhook,
 	LinearAgentSessionPromptedWebhook,
-	// LinearIssueAssignedWebhook,
-	// LinearIssueCommentMentionWebhook,
-	// LinearIssueNewCommentWebhook,
 	LinearIssueUnassignedWebhook,
 	LinearWebhook,
 	LinearWebhookAgentSession,
@@ -32,6 +29,9 @@ import type {
 	SerializedCyrusAgentSession,
 	SerializedCyrusAgentSessionEntry,
 } from "cyrus-core";
+// Import orchestration services
+import { OrchestrationService } from "./services/OrchestrationService.js";
+import { OrchestrationMessageBus/*, MessageType*/ } from "./services/OrchestrationMessageBus.js";
 import {
 	isAgentSessionCreatedWebhook,
 	isAgentSessionPromptedWebhook,
@@ -80,6 +80,8 @@ export class EdgeWorker extends EventEmitter {
 	private ndjsonClients: Map<string, NdjsonClient> = new Map(); // listeners for webhook events, one per linear token
 	private persistenceManager: PersistenceManager;
 	private sharedApplicationServer: SharedApplicationServer;
+	private orchestrationServices: Map<string, OrchestrationService> = new Map(); // One per repository
+	private orchestrationMessageBuses: Map<string, OrchestrationMessageBus> = new Map(); // One per repository
 
 	constructor(config: EdgeWorkerConfig) {
 		super();
@@ -119,6 +121,25 @@ export class EdgeWorker extends EventEmitter {
 					repo.id,
 					new AgentSessionManager(linearClient),
 				);
+
+				// Initialize orchestration services if user auth token is provided
+				const userAuthToken = repo.userAuthToken || config.defaultUserAuthToken;
+				if (userAuthToken) {
+					const orchestrationService = new OrchestrationService(
+						linearClient,
+						userAuthToken
+					);
+					this.orchestrationServices.set(repo.id, orchestrationService);
+
+					const messageBus = new OrchestrationMessageBus({
+						linearClient,
+						userAuthToken,
+						orchestrationService
+					});
+					this.orchestrationMessageBuses.set(repo.id, messageBus);
+
+					console.log(`Orchestration enabled for repository ${repo.name}`);
+				}
 			}
 		}
 
@@ -756,7 +777,7 @@ export class EdgeWorker extends EventEmitter {
 		// Only fetch labels and determine system prompt for delegation (not mentions)
 		let systemPrompt: string | undefined;
 		let systemPromptVersion: string | undefined;
-		let promptType: "debugger" | "builder" | "scoper" | undefined;
+		let promptType: "orchestrator" | "debugger" | "builder" | "scoper" | undefined;
 
 		if (!isMentionTriggered) {
 			// Fetch issue labels and determine system prompt (delegation case)
@@ -1225,6 +1246,100 @@ export class EdgeWorker extends EventEmitter {
 	}
 
 	/**
+	 * Handle orchestration-related webhooks
+	 * TODO: Integrate this when webhook types are properly defined
+	 */
+	// private async handleOrchestrationWebhook(
+	// 	webhook: any, // Using any for now since we're working with dynamic webhook types
+	// 	repository: RepositoryConfig,
+	// ): Promise<void> {
+	// 	const orchestrationService = this.orchestrationServices.get(repository.id);
+	// 	const messageBus = this.orchestrationMessageBuses.get(repository.id);
+
+	// 	if (!orchestrationService || !messageBus) {
+	// 		console.log(`[EdgeWorker] Orchestration not enabled for repository ${repository.id}`);
+	// 		return;
+	// 	}
+
+	// 	// Handle webhook for orchestration tracking
+	// 	await orchestrationService.handleWebhookForOrchestration(webhook);
+
+	// 	// Check if this is a child issue completion
+	// 	if (this.isChildIssueCompletion(webhook)) {
+	// 		await this.handleChildIssueCompletion(webhook, repository);
+	// 	}
+	// }
+
+	/**
+	 * Check if a webhook represents a child issue completion
+	 * TODO: Enable when orchestration webhooks are integrated
+	 */
+	// private isChildIssueCompletion(webhook: any): boolean {
+	// 	// Check for agent session completion with specific markers
+	// 	if (webhook.type === 'AgentSessionEvent' && webhook.action === 'completed') {
+	// 		const session = webhook.agentSession;
+	// 		if (session && session.status === 'complete' && session.issueId) {
+	// 			const orchestrationService = Array.from(this.orchestrationServices.values())
+	// 				.find(service => service.isChildIssue(session.issueId));
+	// 			return !!orchestrationService;
+	// 		}
+	// 	}
+	// 	return false;
+	// }
+
+	/**
+	 * Handle child issue completion and notify parent
+	 * TODO: Enable when orchestration webhooks are integrated
+	 */
+	// private async handleChildIssueCompletion(
+	// 	webhook: any,
+	// 	repository: RepositoryConfig,
+	// ): Promise<void> {
+	// 	const orchestrationService = this.orchestrationServices.get(repository.id);
+	// 	const messageBus = this.orchestrationMessageBuses.get(repository.id);
+
+	// 	if (!orchestrationService || !messageBus) {
+	// 		return;
+	// 	}
+
+	// 	const session = webhook.agentSession;
+	// 	const childIssueId = session.issueId;
+
+	// 	// Get the completion result from the session
+	// 	const result = session.summary || 'Completed';
+
+	// 	// Send completion message through the message bus
+	// 	await messageBus.sendMessage({
+	// 		type: MessageType.CHILD_ISSUE_COMPLETED,
+	// 		parentIssueId: orchestrationService.getParentIssueId(childIssueId) || '',
+	// 		childIssueId,
+	// 		payload: {
+	// 			result,
+	// 			summary: session.summary,
+	// 			completedAt: new Date()
+	// 		},
+	// 		timestamp: new Date()
+	// 	});
+
+	// 	console.log(`[EdgeWorker] Child issue ${childIssueId} completion processed`);
+	// }
+
+	/**
+	 * Check if an issue has orchestration label
+	 * TODO: Implement when Linear issue label structure is properly typed
+	 */
+	// private hasOrchestrationLabel(issue: LinearIssue, repository: RepositoryConfig): boolean {
+	// 	const orchestratorLabels = repository.labelPrompts?.orchestrator?.labels || [];
+	// 	if (orchestratorLabels.length === 0) {
+	// 		return false;
+	// 	}
+
+	// 	// Check if issue has any orchestration labels
+	// 	// This would need to be implemented based on actual issue label structure
+	// 	return false; // Placeholder - needs actual implementation
+	// }
+
+	/**
 	 * Handle Claude session error
 	 * TODO: improve this
 	 */
@@ -1258,7 +1373,7 @@ export class EdgeWorker extends EventEmitter {
 		| {
 				prompt: string;
 				version?: string;
-				type?: "debugger" | "builder" | "scoper";
+				type?: "orchestrator" | "debugger" | "builder" | "scoper";
 		  }
 		| undefined
 	> {
@@ -1267,7 +1382,7 @@ export class EdgeWorker extends EventEmitter {
 		}
 
 		// Check each prompt type for matching labels
-		const promptTypes = ["debugger", "builder", "scoper"] as const;
+		const promptTypes = ["orchestrator", "debugger", "builder", "scoper"] as const;
 
 		for (const promptType of promptTypes) {
 			const promptConfig = repository.labelPrompts[promptType];
@@ -2620,7 +2735,7 @@ ${newComment ? `New comment to address:\n${newComment.body}\n\n` : ""}Please ana
 	 */
 	private buildAllowedTools(
 		repository: RepositoryConfig,
-		promptType?: "debugger" | "builder" | "scoper",
+		promptType?: "orchestrator" | "debugger" | "builder" | "scoper",
 	): string[] {
 		let baseTools: string[] = [];
 		let toolSource = "";

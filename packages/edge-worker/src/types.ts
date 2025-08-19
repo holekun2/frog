@@ -49,7 +49,14 @@ export interface RepositoryConfig {
 			labels: string[]; // Labels that trigger scoper mode (e.g., ["PRD"])
 			allowedTools?: string[] | "readOnly" | "safe" | "all"; // Tool restrictions for scoper mode
 		};
+		orchestrator?: {
+			labels: string[]; // Labels that trigger orchestrator mode (e.g., ["Orchestrate", "Multi-Part"])
+			allowedTools?: string[] | "readOnly" | "safe" | "all"; // Tool restrictions for orchestrator mode
+		};
 	};
+
+	// Orchestration configuration
+	userAuthToken?: string; // User auth token for cross-posting between issues (triggers webhooks)
 }
 
 /**
@@ -81,7 +88,13 @@ export interface EdgeWorkerConfig {
 		scoper?: {
 			allowedTools?: string[] | "readOnly" | "safe" | "all";
 		};
+		orchestrator?: {
+			allowedTools?: string[] | "readOnly" | "safe" | "all";
+		};
 	};
+
+	// Orchestration configuration
+	defaultUserAuthToken?: string; // Default user auth token for orchestration (can be overridden per repository)
 
 	// Repository configurations
 	repositories: RepositoryConfig[];
