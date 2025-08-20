@@ -31,7 +31,7 @@ import type {
 } from "cyrus-core";
 // Import orchestration services
 import { OrchestrationService } from "./services/OrchestrationService.js";
-import { OrchestrationMessageBus/*, MessageType*/ } from "./services/OrchestrationMessageBus.js";
+import { OrchestrationMessageBus, MessageType } from "./services/OrchestrationMessageBus.js";
 import {
 	isAgentSessionCreatedWebhook,
 	isAgentSessionPromptedWebhook,
@@ -391,6 +391,12 @@ export class EdgeWorker extends EventEmitter {
 		);
 
 		try {
+			// Handle orchestration aspects of all webhooks first
+			// This processes orchestration tracking and child issue completions
+			if (repository.userAuthToken) {
+				await this.handleOrchestrationWebhook(webhook as any, repository);
+			}
+
 			// Handle specific webhook types with proper typing
 			// NOTE: Traditional webhooks (assigned, comment) are disabled in favor of agent session events
 			if (isIssueAssignedWebhook(webhook)) {
@@ -1247,82 +1253,80 @@ export class EdgeWorker extends EventEmitter {
 
 	/**
 	 * Handle orchestration-related webhooks
-	 * TODO: Integrate this when webhook types are properly defined
 	 */
-	// private async handleOrchestrationWebhook(
-	// 	webhook: any, // Using any for now since we're working with dynamic webhook types
-	// 	repository: RepositoryConfig,
-	// ): Promise<void> {
-	// 	const orchestrationService = this.orchestrationServices.get(repository.id);
-	// 	const messageBus = this.orchestrationMessageBuses.get(repository.id);
+	private async handleOrchestrationWebhook(
+		webhook: any, // Will be properly typed when Linear SDK types are fully aligned
+		repository: RepositoryConfig,
+	): Promise<void> {
+		const orchestrationService = this.orchestrationServices.get(repository.id);
+		const messageBus = this.orchestrationMessageBuses.get(repository.id);
 
-	// 	if (!orchestrationService || !messageBus) {
-	// 		console.log(`[EdgeWorker] Orchestration not enabled for repository ${repository.id}`);
-	// 		return;
-	// 	}
+		if (!orchestrationService || !messageBus) {
+			console.log(`[EdgeWorker] Orchestration not enabled for repository ${repository.id}`);
+			return;
+		}
 
-	// 	// Handle webhook for orchestration tracking
-	// 	await orchestrationService.handleWebhookForOrchestration(webhook);
+		// Handle webhook for orchestration tracking
+		await orchestrationService.handleWebhookForOrchestration(webhook);
 
-	// 	// Check if this is a child issue completion
-	// 	if (this.isChildIssueCompletion(webhook)) {
-	// 		await this.handleChildIssueCompletion(webhook, repository);
-	// 	}
-	// }
+		// Check if this is a child issue completion
+		if (this.isChildIssueCompletion(webhook)) {
+			await this.handleChildIssueCompletion(webhook, repository);
+		}
+	}
 
 	/**
 	 * Check if a webhook represents a child issue completion
-	 * TODO: Enable when orchestration webhooks are integrated
 	 */
-	// private isChildIssueCompletion(webhook: any): boolean {
-	// 	// Check for agent session completion with specific markers
-	// 	if (webhook.type === 'AgentSessionEvent' && webhook.action === 'completed') {
-	// 		const session = webhook.agentSession;
-	// 		if (session && session.status === 'complete' && session.issueId) {
-	// 			const orchestrationService = Array.from(this.orchestrationServices.values())
-	// 				.find(service => service.isChildIssue(session.issueId));
-	// 			return !!orchestrationService;
-	// 		}
-	// 	}
-	// 	return false;
-	// }
+	private isChildIssueCompletion(webhook: any): boolean {
+		// Check for agent session completion with specific markers
+		if (webhook.type === 'AgentSessionEvent' && webhook.action === 'completed') {
+			const agentWebhook = webhook as any; // AgentSessionEventWebhookPayload
+			const session = agentWebhook.agentSession;
+			if (session && session.issueId) {
+				const orchestrationService = Array.from(this.orchestrationServices.values())
+					.find(service => service.isChildIssue(session.issueId));
+				return !!orchestrationService;
+			}
+		}
+		return false;
+	}
 
 	/**
 	 * Handle child issue completion and notify parent
-	 * TODO: Enable when orchestration webhooks are integrated
 	 */
-	// private async handleChildIssueCompletion(
-	// 	webhook: any,
-	// 	repository: RepositoryConfig,
-	// ): Promise<void> {
-	// 	const orchestrationService = this.orchestrationServices.get(repository.id);
-	// 	const messageBus = this.orchestrationMessageBuses.get(repository.id);
+	private async handleChildIssueCompletion(
+		webhook: any, // Will be properly typed when Linear SDK types are fully aligned
+		repository: RepositoryConfig,
+	): Promise<void> {
+		const orchestrationService = this.orchestrationServices.get(repository.id);
+		const messageBus = this.orchestrationMessageBuses.get(repository.id);
 
-	// 	if (!orchestrationService || !messageBus) {
-	// 		return;
-	// 	}
+		if (!orchestrationService || !messageBus) {
+			return;
+		}
 
-	// 	const session = webhook.agentSession;
-	// 	const childIssueId = session.issueId;
+		const session = (webhook as any).agentSession; // AgentSessionEventWebhookPayload
+		const childIssueId = session.issueId;
 
-	// 	// Get the completion result from the session
-	// 	const result = session.summary || 'Completed';
+		// Get the completion result from the session
+		const result = 'Completed'; // AgentSession doesn't have summary in the webhook data
 
-	// 	// Send completion message through the message bus
-	// 	await messageBus.sendMessage({
-	// 		type: MessageType.CHILD_ISSUE_COMPLETED,
-	// 		parentIssueId: orchestrationService.getParentIssueId(childIssueId) || '',
-	// 		childIssueId,
-	// 		payload: {
-	// 			result,
-	// 			summary: session.summary,
-	// 			completedAt: new Date()
-	// 		},
-	// 		timestamp: new Date()
-	// 	});
+		// Send completion message through the message bus
+		await messageBus.sendMessage({
+			type: MessageType.CHILD_ISSUE_COMPLETED,
+			parentIssueId: orchestrationService.getParentIssueId(childIssueId) || '',
+			childIssueId,
+			payload: {
+				result,
+				summary: result,
+				completedAt: new Date()
+			},
+			timestamp: new Date()
+		});
 
-	// 	console.log(`[EdgeWorker] Child issue ${childIssueId} completion processed`);
-	// }
+		console.log(`[EdgeWorker] Child issue ${childIssueId} completion processed`);
+	}
 
 	/**
 	 * Check if an issue has orchestration label
