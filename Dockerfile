@@ -40,6 +40,6 @@ ENV CYRUS_HOST_EXTERNAL=true
 ENV CYRUS_BASE_URL=$RAILWAY_STATIC_URL
 ENV CYRUS_SERVER_PORT=3456
 
-# Start the CLI
+# Start the CLI using the built version
 WORKDIR /app/apps/cli
-CMD ["node", "app.js"]
+CMD ["node", "dist/app.js"]
