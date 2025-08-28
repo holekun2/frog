@@ -63,7 +63,7 @@ export class SharedApplicationServer {
 		this.proxyUrl =
 			proxyUrl ||
 			process.env.PROXY_URL ||
-			"https://cyrus-proxy.ceedar.workers.dev";
+			"https://cyrus-proxy.holekun1.workers.dev";
 	}
 
 	/**

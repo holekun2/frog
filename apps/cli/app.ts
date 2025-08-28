@@ -27,7 +27,7 @@ const envFileArg = args.find((arg) => arg.startsWith("--env-file="));
 const cyrusHomeArg = args.find((arg) => arg.startsWith("--cyrus-home="));
 
 // Constants
-const DEFAULT_PROXY_URL = "https://cyrus-proxy.ceedar.workers.dev";
+const DEFAULT_PROXY_URL = "https://cyrus-proxy.holekun1.workers.dev";
 
 // Determine the Cyrus home directory once at startup
 let CYRUS_HOME: string;
@@ -1718,7 +1718,7 @@ async function addRepositoryCommand() {
 
 			// Start OAuth flow using the default proxy URL
 			const proxyUrl =
-				process.env.PROXY_URL || "https://cyrus-proxy.ceedar.workers.dev";
+				process.env.PROXY_URL || "https://cyrus-proxy.holekun1.workers.dev";
 			linearCredentials = await app.startOAuthFlow(proxyUrl);
 
 			if (!linearCredentials) {

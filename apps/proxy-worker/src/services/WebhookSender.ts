@@ -1,5 +1,4 @@
-import { createHmac } from "node:crypto";
-import type { EdgeEvent, LinearWebhook } from "../types";
+import type { EdgeEvent, Env, LinearWebhook } from "../types";
 import {
 	EdgeWorkerRegistry,
 	type StoredEdgeWorker,
@@ -12,7 +11,7 @@ export class WebhookSender {
 	private eventCounter = 0;
 	private registry: EdgeWorkerRegistry;
 
-	constructor() {
+	constructor(private env: Env) {
 		this.registry = new EdgeWorkerRegistry(env);
 	}
 
@@ -100,7 +99,7 @@ export class WebhookSender {
 	): Promise<void> {
 		const body = JSON.stringify(event);
 		const timestamp = Date.now().toString();
-		const signature = this.generateWebhookSignature(
+		const signature = await this.generateWebhookSignature(
 			body,
 			timestamp,
 			worker.webhookSecret,
@@ -131,13 +130,28 @@ export class WebhookSender {
 	/**
 	 * Generate HMAC-SHA256 signature for webhook verification
 	 */
-	private generateWebhookSignature(
+	private async generateWebhookSignature(
 		body: string,
 		timestamp: string,
 		secret: string,
-	): string {
+	): Promise<string> {
 		const payload = `${timestamp}.${body}`;
-		return createHmac("sha256", secret).update(payload).digest("hex");
+		const encoder = new TextEncoder();
+		const key = await crypto.subtle.importKey(
+			"raw",
+			encoder.encode(secret),
+			{ name: "HMAC", hash: "SHA-256" },
+			false,
+			["sign"],
+		);
+		const signature = await crypto.subtle.sign(
+			"HMAC",
+			key,
+			encoder.encode(payload),
+		);
+		return Array.from(new Uint8Array(signature))
+			.map((b) => b.toString(16).padStart(2, "0"))
+			.join("");
 	}
 
 	/**
@@ -145,7 +159,10 @@ export class WebhookSender {
 	 */
 	async handleStatusUpdate(request: Request): Promise<Response> {
 		try {
-			const { eventId, status } = await request.json();
+			const { eventId, status } = (await request.json()) as {
+				eventId: string;
+				status: string;
+			};
 
 			// Extract edge authentication
 			const authHeader = request.headers.get("authorization");

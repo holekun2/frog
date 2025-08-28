@@ -1,24 +1,36 @@
-# Cyrus
+# Frog 🐸
 
 <div>
-  <a href="https://ceedar.ai">
-    <img src="https://img.shields.io/badge/Built%20by-Ceedar.ai-b8ec83?style=for-the-badge&logoColor=black&labelColor=333333" alt="Built by Ceedar.ai">
+  <a href="https://github.com/johnjames9007/frog">
+    <img src="https://img.shields.io/badge/Forked%20from-Cyrus-green?style=for-the-badge&logoColor=black&labelColor=333333" alt="Forked from Cyrus">
   </a><br />
-  <a href="https://github.com/ceedaragents/cyrus/actions">
-    <img src="https://github.com/ceedaragents/cyrus/actions/workflows/ci.yml/badge.svg" alt="CI">
+  <a href="https://github.com/johnjames9007/frog/actions">
+    <img src="https://github.com/johnjames9007/frog/actions/workflows/ci.yml/badge.svg" alt="CI">
   </a>
 </div>
 
-AI development agent for Linear powered by Claude Code. Cyrus monitors Linear issues assigned to it, creates isolated Git worktrees for each issue, runs Claude Code sessions to process them, and posts responses back to Linear as comments, all from the safety and security of your own computer.
+AI development agent for Linear powered by Claude Code. Frog monitors Linear issues assigned to it, creates isolated Git worktrees for each issue, runs Claude Code sessions to process them, and posts responses back to Linear as comments, all from the safety and security of your own computer.
 
-**Please Note: Cyrus is built entirely on the premise that you bring your own Claude Code keys/billing. Subscribing to Cyrus Pro gets you priority support, convenience of not hosting a Linear app and cloudflare worker, and funds feature development. You can also host the proxy yourself if you don't wish to pay for that convenience. Documentation coming soon.**
+**Note: Frog is a self-hosted fork of Cyrus with its own Cloudflare Workers proxy. You bring your own Claude Code keys/billing and get a fully independent setup without subscription requirements.**
 
 ## Installation
 
-### Via npm (recommended)
+### From Source (recommended)
 
 ```bash
-npm install -g cyrus-ai
+git clone https://github.com/johnjames9007/frog.git
+cd frog
+pnpm install
+pnpm build
+cd apps/cli
+npm install -g .
+```
+
+### Verify Installation
+
+```bash
+frog --version
+frog --help
 ```
 
 ## Quick Start
@@ -30,22 +42,22 @@ npm install -g cyrus-ai
 #### Run the main program:
 
 ```bash
-cyrus
+frog
 ```
 
 #### Follow the prompts to:
 
-- Connect your Linear workspace via OAuth
+- Connect your Linear workspace via OAuth (uses built-in Cloudflare Workers proxy)
 - Configure your repository settings
 - Set up allowed tools (security configuration), and optionally, mcp servers
 
 #### Benefit
 
-Keep `cyrus` running, and the agent will start monitoring issues assigned to you in Linear and process them automatically, on your very own device.
+Keep `frog` running, and the agent will start monitoring issues assigned to you in Linear and process them automatically, on your very own device.
 
 ## Configuration
 
-After initial setup, Cyrus stores your configuration in `~/.cyrus/config.json`. You can edit this file to customize the following settings:
+After initial setup, Frog stores your configuration in `~/.frog/config.json`. You can edit this file to customize the following settings:
 
 ### Repository Configuration
 
@@ -234,18 +246,25 @@ When determining allowed tools, Cyrus follows this priority order:
 
 <details>
   
-If you want to host Cyrus on a remote machine for 24/7 availability, follow these steps on a newly created virtual machine to get started.
+If you want to host Frog on a remote machine for 24/7 availability, follow these steps on a newly created virtual machine to get started.
 
-1. Install `gh`, `npm`, and `git`
+1. Install `gh`, `npm`, `git`, and `pnpm`
 
 ```bash
 apt install -y gh npm git
+npm install -g pnpm
 ```
 
-2. Install `claude` and `cyrus` via `npm`
+2. Install `claude` and clone `frog`
 
 ```bash
-npm install -g @anthropic-ai/claude-code cyrus-ai
+npm install -g @anthropic-ai/claude-code
+git clone https://github.com/johnjames9007/frog.git
+cd frog
+pnpm install
+pnpm build
+cd apps/cli
+npm install -g .
 ```
 
 3. Set up `git` CLI
@@ -289,6 +308,7 @@ CYRUS_SERVER_PORT=3456
 # Base URL configuration (required for Linear integration - handles both webhooks and OAuth)
 CYRUS_BASE_URL=<your publicly accessible URL>
 
+# Note: Frog uses a built-in Cloudflare Workers proxy, so no additional proxy setup needed
 # Legacy environment variables (still supported for backward compatibility)
 # CYRUS_WEBHOOK_BASE_URL=<url>  # Use CYRUS_BASE_URL instead
 # CYRUS_WEBHOOK_PORT=3456  # Use CYRUS_SERVER_PORT instead
@@ -296,7 +316,9 @@ CYRUS_BASE_URL=<your publicly accessible URL>
 
 ### Webhook Configuration Options
 
-Cyrus needs to receive webhooks from Linear, so you need a publicly accessible URL. Choose one of these options:
+Frog needs to receive webhooks from Linear, so you need a publicly accessible URL. Choose one of these options:
+
+**Note:** Frog includes a built-in Cloudflare Workers proxy that handles OAuth and webhook routing automatically.
 
 **Option 1: Using ngrok (for development/testing)**
 ```bash
@@ -327,28 +349,28 @@ export CYRUS_BASE_URL=https://your-domain.com
 export CYRUS_SERVER_PORT=3456
 ```
 
-8. Start the cyrus server
+8. Start the frog server
 
 ```bash
-cyrus --env-file=<path>
+frog --env-file=<path>
 
 # Optional
-# Start cyrus in a tmux session for
-tmux new -s cyrus-session # Can name whatever you'd like
+# Start frog in a tmux session for
+tmux new -s frog-session # Can name whatever you'd like
 # Ctrl-B -> D to exit
 # To later 'attach' to it again
-tmux attach -t cyrus-session
+tmux attach -t frog-session
 ```
 </details>
 
 
 ## Repository Setup Script
 
-Cyrus supports an optional `cyrus-setup.sh` script that runs automatically when creating new git worktrees for issues. This is useful for repository-specific initialization tasks.
+Cyrus supports an optional `frog-setup.sh` script that runs automatically when creating new git worktrees for issues. This is useful for repository-specific initialization tasks.
 
 ### How it works
 
-1. Place a `cyrus-setup.sh` script in your repository root
+1. Place a `frog-setup.sh` script in your repository root
 2. When Cyrus processes an issue, it creates a new git worktree
 3. If the setup script exists, Cyrus runs it in the new worktree with these environment variables:
    - `LINEAR_ISSUE_ID` - The Linear issue ID
@@ -359,7 +381,7 @@ Cyrus supports an optional `cyrus-setup.sh` script that runs automatically when 
 
 ```bash
 #!/bin/bash
-# cyrus-setup.sh - Repository initialization script
+# frog-setup.sh - Repository initialization script
 
 # Copy environment files from a central location
 cp /Users/agentops/code/ceedar/packages/evals/.env packages/evals/.env
@@ -371,7 +393,7 @@ cp /Users/agentops/code/ceedar/packages/evals/.env packages/evals/.env
 echo "Repository setup complete for issue: $LINEAR_ISSUE_IDENTIFIER"
 ```
 
-Make sure the script is executable: `chmod +x cyrus-setup.sh`
+Make sure the script is executable: `chmod +x frog-setup.sh`
 
 ## Submitting Work To GitHub
 
@@ -389,13 +411,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Credits
 
-Developed by [Ceedar](https://ceedar.ai/)
+**Frog** is a fork of [Cyrus](https://github.com/ceedaragents/cyrus) originally developed by [Ceedar](https://ceedar.ai/).
 
-This projects builds on the technologies built by the awesome teams at Linear, and Claude by Anthropic:
+This project builds on the technologies built by the awesome teams at Linear, and Claude by Anthropic:
 
 - [Linear API](https://linear.app/developers)
 - [Anthropic Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview)
+- [Cloudflare Workers](https://workers.cloudflare.com/) (for the proxy infrastructure)
 
 ---
 
-_This README was last updated: June 11 2025_
+_This README was last updated: August 28 2025_

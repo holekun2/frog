@@ -1,11 +1,11 @@
 {
-	"name": "cyrus-ai",
+	"name": "frog-ai",
 	"version": "0.1.44",
-	"description": "AI-powered Linear issue automation using Claude",
+	"description": "AI-powered Linear issue automation using Claude (Frog edition)",
 	"main": "dist/app.js",
 	"types": "dist/app.d.ts",
 	"bin": {
-		"cyrus": "./dist/app.js"
+		"frog": "./dist/app.js"
 	},
 	"type": "module",
 	"scripts": {
